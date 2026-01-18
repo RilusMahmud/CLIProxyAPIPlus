@@ -135,9 +135,16 @@ type ModelSnapshot struct {
 }
 
 var defaultRequestStatistics = NewRequestStatistics()
+var globalSQLiteStore *SQLiteStore
 
 // GetRequestStatistics returns the shared statistics store.
 func GetRequestStatistics() *RequestStatistics { return defaultRequestStatistics }
+
+// SetSQLiteStore sets the global SQLite store for usage persistence.
+func SetSQLiteStore(store *SQLiteStore) { globalSQLiteStore = store }
+
+// GetSQLiteStore returns the global SQLite store, or nil if not configured.
+func GetSQLiteStore() *SQLiteStore { return globalSQLiteStore }
 
 // NewRequestStatistics constructs an empty statistics store.
 func NewRequestStatistics() *RequestStatistics {
