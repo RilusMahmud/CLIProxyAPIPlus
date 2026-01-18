@@ -261,6 +261,10 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	if optionState.localPassword != "" {
 		s.mgmt.SetLocalPassword(optionState.localPassword)
 	}
+	// Set SQLite store if enabled
+	if sqliteStore := usage.GetSQLiteStore(); sqliteStore != nil {
+		s.mgmt.SetSQLiteStore(sqliteStore)
+	}
 	logDir := logging.ResolveLogDirectory(cfg)
 	s.mgmt.SetLogDirectory(logDir)
 	s.localPassword = optionState.localPassword
