@@ -54,6 +54,9 @@ type Config struct {
 	// UsageStatisticsEnabled toggles in-memory usage aggregation; when false, usage data is discarded.
 	UsageStatisticsEnabled bool `yaml:"usage-statistics-enabled" json:"usage-statistics-enabled"`
 
+	// UsageSQLite configures SQLite-based persistence for usage statistics.
+	UsageSQLite UsageSQLiteConfig `yaml:"usage-sqlite" json:"usage-sqlite"`
+
 	// DisableCooling disables quota cooldown scheduling when true.
 	DisableCooling bool `yaml:"disable-cooling" json:"disable-cooling"`
 
@@ -163,6 +166,14 @@ type RoutingConfig struct {
 	// Strategy selects the credential selection strategy.
 	// Supported values: "round-robin" (default), "fill-first".
 	Strategy string `yaml:"strategy,omitempty" json:"strategy,omitempty"`
+}
+
+// UsageSQLiteConfig configures SQLite-based persistence for usage statistics.
+type UsageSQLiteConfig struct {
+	// Enabled toggles SQLite persistence for usage statistics.
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	// Path specifies the database file location. Defaults to <auth-dir>/usage.db if empty.
+	Path string `yaml:"path" json:"path"`
 }
 
 // OAuthModelAlias defines a model ID alias for a specific channel.
