@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/usage"
+	log "github.com/sirupsen/logrus"
 )
 
 type usageExportPayload struct {
@@ -69,6 +70,20 @@ func (h *Handler) ImportUsageStatistics(c *gin.Context) {
 	}
 
 	result := h.usageStats.MergeSnapshot(payload.Usage)
+
+	// Persist to SQLite if enabled
+	if h.sqliteStore != nil {
+		added, skipped, err := h.sqliteStore.PersistSnapshot(c.Request.Context(), payload.Usage)
+		if err != nil {
+			log.WithError(err).Error("failed to persist imported usage data to SQLite")
+		} else {
+			log.WithFields(log.Fields{
+				"added":   added,
+				"skipped": skipped,
+			}).Info("persisted imported usage data to SQLite")
+		}
+	}
+
 	snapshot := h.usageStats.Snapshot()
 	c.JSON(http.StatusOK, gin.H{
 		"added":           result.Added,
