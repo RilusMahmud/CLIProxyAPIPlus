@@ -29,6 +29,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	coreusage "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/usage"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -435,6 +436,46 @@ func main() {
 	}
 	usage.SetStatisticsEnabled(cfg.UsageStatisticsEnabled)
 	coreauth.SetQuotaCooldownDisabled(cfg.DisableCooling)
+
+	// Initialize SQLite persistence for usage statistics if enabled
+	var sqliteStore *usage.SQLiteStore
+	if cfg.UsageSQLite.Enabled {
+		dbPath := cfg.UsageSQLite.Path
+		if dbPath == "" {
+			// Default to <auth-dir>/usage.db
+			dbPath = filepath.Join(cfg.AuthDir, "usage.db")
+		}
+		sqliteStore, err = usage.NewSQLiteStore(dbPath)
+		if err != nil {
+			log.Errorf("failed to initialize SQLite store: %v", err)
+			return
+		}
+		defer sqliteStore.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := sqliteStore.EnsureSchema(ctx); err != nil {
+			cancel()
+			log.Errorf("failed to create SQLite schema: %v", err)
+			return
+		}
+		cancel()
+
+		// Load existing records and merge into in-memory stats
+		sqlitePlugin := usage.NewSQLitePlugin(sqliteStore, usage.GetRequestStatistics())
+		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+		if err := sqlitePlugin.LoadAndMerge(ctx); err != nil {
+			cancel()
+			log.Warnf("failed to restore usage statistics from SQLite: %v", err)
+		} else {
+			cancel()
+		}
+
+		// Register plugin to persist new records
+		coreusage.RegisterPlugin(sqlitePlugin)
+		// Set global store for management handler access
+		usage.SetSQLiteStore(sqliteStore)
+		log.Infof("SQLite usage persistence enabled, database path: %s", dbPath)
+	}
 
 	if err = logging.ConfigureLogOutput(cfg); err != nil {
 		log.Errorf("failed to configure log output: %v", err)
