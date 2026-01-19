@@ -5,6 +5,7 @@
 VERSION ?= dev
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+DOCKER_USERNAME ?= rilusmahmud
 
 # Build variables
 BINARY_NAME = cli-proxy-api-plus
@@ -13,6 +14,10 @@ LDFLAGS = -s -w \
 	-X 'main.Version=$(VERSION)-plus' \
 	-X 'main.Commit=$(COMMIT)' \
 	-X 'main.BuildDate=$(BUILD_DATE)'
+
+# Docker variables
+IMAGE_NAME = $(DOCKER_USERNAME)/cli-proxy-api-plus
+DOCKER_TAG ?= $(VERSION)
 
 # Output directories
 BUILD_DIR = build
@@ -103,3 +108,19 @@ version: ## Show version information
 	@echo "Version:    $(VERSION)-plus"
 	@echo "Commit:     $(COMMIT)"
 	@echo "Build Date: $(BUILD_DATE)"
+
+.PHONY: docker-build
+docker-build: ## Build Docker image with version info
+	@echo "Building Docker image..."
+	@echo "Version:    $(VERSION)-plus"
+	@echo "Commit:     $(COMMIT)"
+	@echo "Build Date: $(BUILD_DATE)"
+	@echo "Image Tag:  $(IMAGE_NAME):$(DOCKER_TAG)"
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		-t $(IMAGE_NAME):$(DOCKER_TAG) \
+		-t $(IMAGE_NAME):latest \
+		.
+	@echo "Docker build complete: $(IMAGE_NAME):$(DOCKER_TAG)"
